@@ -129,6 +129,10 @@ class AIPromptService:
             enhanced_prompt = f"{prompt.get('prompt','')} Keywords: {', '.join(prompt.get('keywords',[])}"
             try:
                 response = self.generate_response(enhanced_prompt)
+		#Claude AI Model
+		#response = self._generate_anthropic_response(enhanced_prompt)
+		#ChatGPT AI model
+                #response = self._generate_openai_response(enhanced_prompt)
                 results.append({
                     'prompt': prompt,
                     'keywords': keywords,
