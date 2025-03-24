@@ -71,9 +71,6 @@ Includes a dashboard for human review of classifications
 Implements feedback loops for continuous improvement
 The system architecture follows modern microservices design principles, ensuring scalability and maintainability.
 
-
-
-
 ## 🚧 Challenges We Faced
 
 Throughout development, we encountered several challenges:
@@ -99,8 +96,7 @@ cd genai-loan-classification
 
 Set up environment variables:
 bashCopycp .env.example .env
-# Edit .env with your API keys and configuration
-
+Edit .env with your API keys and configuration
 Start the services using Docker Compose:
 bashCopydocker-compose up -d
 
@@ -112,7 +108,6 @@ The system can be configured through the .env file and config/ directory:
 config/request_types.json - Defines the request types and sub-request types
 config/prompts.json - Contains the prompt templates for the AI service
 config/integration.json - Specifies integration endpoints and formats
-
 
 
 ## 🏗️ Tech Stack
@@ -138,7 +133,11 @@ Socket.IO for real-time updates
 Our diverse team brings together expertise in AI, software engineering, and financial services:
 
 Sarma, K V Subramanyeswar      - Lead Software Engineer
+
 Antil Siddhant                 - Software Engineer   
+
 Potnuru,Santosh Kumar          - Lead Software Engineer
+
 Bikkina, Sri Durga Sravanthi   - Senior Software Engineer
+
 Lokanandi,Dharanidhar L         - Senior Software Engineer
