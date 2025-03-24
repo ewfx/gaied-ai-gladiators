@@ -1,293 +1,323 @@
 import os
 import json
-import requests
-from typing import Dict, Any, Optional
-import anthropic  # For Anthropic's Claude
-import openai  # For OpenAI's models
-import google.generativeai as genai  # For Google's models
+import csv
+import re
+import nltk
+from typing import List, Dict, Optional
+from datetime import datetime
+import spacy
+import numpy as np
+import EmailService
 
-class AIPromptService:
-    def __init__(self, config_path: str = 'ai_config.json'):
-        """
-        Initialize the AI Prompt Service with configuration management.
-        
-        :param config_path: Path to the configuration file
-        """
-        self.config = self._load_config(config_path)
-        self._validate_config()
-        self._initialize_clients()
+# Download necessary NLTK resources
+nltk.download('punkt')
+nltk.download('averaged_perceptron_tagger')
+nltk.download('wordnet')
 
-    def _load_config(self, config_path: str) -> Dict[str, Any]:
+import google.generativeai as genai
+from google.generativeai.types import GenerateContentResponse
+
+class NLPTicketProcessor:
+    def __init__(self, 
+                 gemini_api_key: str, 
+                 prompts_keywords_file: str,
+                 output_ticket_file: str = 'service_tickets.csv'):
         """
-        Load configuration from JSON file.
+        Initialize the Advanced NLP Service Ticket Processor
         
-        :param config_path: Path to configuration file
-        :return: Configuration dictionary
+        :param gemini_api_key: API key for Google Gemini AI
+        :param prompts_keywords_file: Path to JSON file with prompts and keywords
+        :param output_ticket_file: Path to output CSV for service tickets
         """
+        # Configure Gemini API
+        genai.configure(api_key=gemini_api_key)
+        
+        # Load prompts and keywords
+        with open(prompts_keywords_file, 'r') as f:
+            self.prompts_config = json.load(f)
+        
+        # Output ticket file
+        self.output_ticket_file = output_ticket_file
+        
+        # Initialize Gemini model
+        self.model = genai.GenerativeModel('gemini-pro')
+        
+        # Load spaCy model for advanced NLP
         try:
-            with open(config_path, 'r') as config_file:
-                return json.load(config_file)
-        except FileNotFoundError:
-            print(f"Config file not found at {config_path}. Using default configuration.")
-            return self._create_default_config()
-        except json.JSONDecodeError:
-            print(f"Invalid JSON in config file at {config_path}. Using default configuration.")
-            return self._create_default_config()
-
-    def _create_default_config(self) -> Dict[str, Any]:
+            self.nlp = spacy.load('en_core_web_sm')
+        except OSError:
+            print("Downloading spaCy model...")
+            spacy.cli.download('en_core_web_sm')
+            self.nlp = spacy.load('en_core_web_sm')
+    
+    def preprocess_text(self, text: str) -> str:
         """
-        Create a default configuration if no config file exists.
+        Advanced text preprocessing
         
-        :return: Default configuration dictionary
+        :param text: Input text
+        :return: Cleaned and preprocessed text
         """
-        return {
-            "providers": {
-                "anthropic": {
-                    "api_key": "",
-                    "model": "claude-3-5-sonnet-20240620",
-                    "temperature": 0.7,
-                    "max_tokens": 1000
-                },
-                "openai": {
-                    "api_key": "",
-                    "model": "gpt-4-turbo",
-                    "temperature": 0.7,
-                    "max_tokens": 1000
-                },
-                "google": {
-                    "api_key": "",
-                    "model": "gemini-pro",
-                    "temperature": 0.7,
-                    "max_tokens": 1000
-                }
-            }
+        # Convert to lowercase
+        text = text.lower()
+        
+        # Remove special characters and extra whitespace
+        text = re.sub(r'[^a-zA-Z0-9\s]', '', text)
+        text = re.sub(r'\s+', ' ', text).strip()
+        
+        return text
+    
+    def extract_named_entities(self, text: str) -> Dict[str, List[str]]:
+        """
+        Extract named entities using spaCy
+        
+        :param text: Input text
+        :return: Dictionary of named entities
+        """
+        doc = self.nlp(text)
+        
+        entities = {
+            'PERSON': [],
+            'ORG': [],
+            'GPE': [],  # Geopolitical entities
+            'PRODUCT': []
         }
-
-    def _validate_config(self):
-        """
-        Validate the configuration dictionary.
-        """
-        required_keys = ['providers']
-        provider_keys = ['anthropic', 'openai', 'google']
         
-        if not all(key in self.config for key in required_keys):
-            raise ValueError("Invalid configuration: Missing required keys")
+        for ent in doc.ents:
+            if ent.label_ in entities:
+                entities[ent.label_].append(ent.text)
         
-        providers = self.config['providers']
-        for provider in provider_keys:
-            if provider not in providers:
-                print(f"Warning: {provider} configuration not found in config")
-
-    def _initialize_clients(self):
+        return entities
+    
+    def semantic_similarity(self, text: str, keywords: List[str]) -> float:
         """
-        Initialize API clients for different providers.
+        Calculate semantic similarity between text and keywords
+        
+        :param text: Input text
+        :param keywords: List of keywords
+        :return: Similarity score
         """
-        # Anthropic Client
-        anthropic_config = self.config['providers'].get('anthropic', {})
-        if anthropic_config.get('api_key'):
-            self.anthropic_client = anthropic.Anthropic(
-                api_key=anthropic_config['api_key']
+        # Preprocess text
+        processed_text = self.preprocess_text(text)
+        
+        # Convert text and keywords to spaCy docs
+        text_doc = self.nlp(processed_text)
+        keyword_docs = [self.nlp(kw) for kw in keywords]
+        
+        # Calculate maximum similarity
+        max_similarity = 0
+        for keyword_doc in keyword_docs:
+            similarity = text_doc.similarity(keyword_doc)
+            max_similarity = max(max_similarity, similarity)
+        
+        return max_similarity
+    
+    def extract_intent_features(self, text: str) -> Dict[str, float]:
+        """
+        Extract intent features using advanced NLP techniques
+        
+        :param text: Input text
+        :return: Dictionary of intent features
+        """
+        # Tokenize and tag parts of speech
+        tokens = nltk.word_tokenize(text)
+        pos_tags = nltk.pos_tag(tokens)
+        
+        # Feature extraction
+        features = {
+            'urgency_indicators': 0.0,
+            'technical_complexity': 0.0,
+            'problem_specificity': 0.0
+        }
+        
+        # Urgency indicators
+        urgency_words = ['urgent', 'critical', 'immediately', 'asap', 'now']
+        features['urgency_indicators'] = sum(
+            1 for word, _ in pos_tags if word.lower() in urgency_words
+        ) / len(tokens)
+        
+        # Technical complexity
+        technical_pos_tags = ['NN', 'NNS', 'NNP']  # Nouns
+        technical_tokens = [
+            word for word, pos in pos_tags 
+            if pos in technical_pos_tags
+        ]
+        features['technical_complexity'] = len(set(technical_tokens)) / len(tokens)
+        
+        # Problem specificity (based on noun phrases and descriptive words)
+        features['problem_specificity'] = len(set(technical_tokens)) / max(len(tokens), 1)
+        
+        return features
+    
+    def analyze_email_content(self, email_content: str) -> Dict[str, str]:
+        """
+        Advanced analysis of email content
+        
+        :param email_content: Raw email content
+        :return: Dictionary with detailed ticket details
+        """
+        # Preprocess email content
+        preprocessed_content = self.preprocess_text(email_content)
+        
+        # Extract named entities
+        entities = self.extract_named_entities(email_content)
+        
+        # Extract intent features
+        intent_features = self.extract_intent_features(email_content)
+        
+        # Prepare comprehensive prompt for Gemini
+        analysis_prompt = f"""Detailed analysis of the following email content:
+        
+        Content: {email_content}
+        
+        Provide a comprehensive analysis considering:
+        1. Primary issue category
+        2. Specific technical details
+        3. Urgency and impact
+        4. Recommended support approach
+        5. Potential root cause
+        """
+        
+        try:
+            # Gemini AI analysis
+            response: GenerateContentResponse = self.model.generate_content(analysis_prompt)
+            analysis = response.text
+            
+            # Advanced ticket details parsing
+            ticket_details = self._advanced_ticket_parsing(
+                analysis, 
+                preprocessed_content, 
+                entities, 
+                intent_features
             )
-        else:
-            self.anthropic_client = None
-
-        # OpenAI Client
-        openai_config = self.config['providers'].get('openai', {})
-        if openai_config.get('api_key'):
-            openai.api_key = openai_config['api_key']
-        else:
-            openai.api_key = None
-
-        # Google Client
-        google_config = self.config['providers'].get('google', {})
-        if google_config.get('api_key'):
-            genai.configure(api_key=google_config['api_key'])
-        else:
-            genai = None
-    #def process_prompts(self, prompt_data: Dict[str,str]) -> List[Dict[str, Any]]:
-    def process_prompts(self, input_file, output_file=None):
-        """
-        Process prompts from input file and generate AI responses
+            
+            return ticket_details
         
-        :param input_file: Path to input file with prompts
-        :param output_file: Optional path to save responses
-        """
-        # Read prompts from file
-        try:
-            with aiofiles.open(input_file, 'r') as f:
-                prompts = json.load(file)
-        except FileNotFoundError:
-            print(f"Error: Input file {input_file} not found.")
-            return
-        
-        # Remove any whitespace and filter out empty lines
-        #prompts = [prompt.strip() for prompt in prompts if prompt.strip()]
-        
-        # Process prompts
-        results = []
-        for prompt in prompts:
-            enhanced_prompt = f"{prompt.get('prompt','')} Keywords: {', '.join(prompt.get('keywords',[])}"
-            try:
-                response = self.generate_response(enhanced_prompt)
-		#Claude AI Model
-		#response = self._generate_anthropic_response(enhanced_prompt)
-		#ChatGPT AI model
-                #response = self._generate_openai_response(enhanced_prompt)
-                results.append({
-                    'prompt': prompt,
-                    'keywords': keywords,
-                    'response': response
-                })
-                print(f"Processed prompt: {prompt[:50]}...")
-            except Exception as e:
-                print(f"Error processing prompt '{prompt}': {e}")
-	        results.append({
-                    "prompt": prompt,
-                    "keywords": keywords,
-                    "response": None,
-                    "error": str(e)
-                })	
-        
-        # Save results
-        #if output_file:
-        #    self.save_results(results, output_file)
-        
-        return results
-    
-    def save_results(self, results: List[Dict[str, Any]], output_file: str): 
-    #def save_results(self, results, output_file):
-        """
-        Save results to a JSON file
-        
-        :param results: List of processed prompts and responses
-        :param output_file: Path to save output file
-        """
-        try:
-            with open(output_file, 'w', encoding='utf-8') as file:
-                json.dump(results, file, indent=2, ensure_ascii=False)
-            print(f"Results saved to {output_file}")
-        except IOError:
-            print(f"Error: Could not write to file {output_file}")
-            #with aiofiles.open(output_file, 'w') as f:
-            #    f.write(json.dumps(results, indent=2))
-            #print(f"Results saved to {output_file}")
-        #except Exception as e:
-         #   print(f"Error saving results: {e}")
-    
-    def generate_response(
-        self, 
-        prompt: str, 
-        provider: str = 'anthropic', 
-        additional_params: Optional[Dict[str, Any]] = None
-    ) -> str:
-        """
-        Generate a response from the specified AI provider.
-        
-        :param prompt: Input prompt for the AI
-        :param provider: AI service provider (anthropic, openai, google)
-        :param additional_params: Additional parameters to customize the request
-        :return: Generated AI response
-        """
-        # Merge default and additional parameters
-        default_params = self.config['providers'].get(provider, {})
-        params = {**default_params, **(additional_params or {})}
-
-        try:
-            if provider == 'anthropic':
-                return self._generate_anthropic_response(prompt, params)
-            elif provider == 'openai':
-                return self._generate_openai_response(prompt, params)
-            elif provider == 'google':
-                return self._generate_google_response(prompt, params)
-            else:
-                raise ValueError(f"Unsupported provider: {provider}")
         except Exception as e:
-            print(f"Error generating response from {provider}: {e}")
-            return ""
-
-    def _generate_anthropic_response(self, prompt: str, params: Dict[str, Any]) -> str:
+            print(f"Error analyzing email content: {e}")
+            return {
+                'category': 'Unclassified',
+                'urgency': 'Medium',
+                'support_group': 'General Support',
+                'summary': 'Unable to automatically classify',
+                'confidence': 0.0
+            }
+    
+    def _advanced_ticket_parsing(self, 
+                                  analysis: str, 
+                                  preprocessed_content: str,
+                                  entities: Dict[str, List[str]],
+                                  intent_features: Dict[str, float]) -> Dict[str, str]:
         """
-        Generate response using Anthropic's Claude model.
+        Advanced ticket parsing with multiple signals
         
-        :param prompt: Input prompt
-        :param params: Configuration parameters
-        :return: Generated response
+        :param analysis: Gemini AI analysis
+        :param preprocessed_content: Preprocessed email content
+        :param entities: Extracted named entities
+        :param intent_features: Extracted intent features
+        :return: Structured ticket details
         """
-        if not self.anthropic_client:
-            raise ValueError("Anthropic client not configured")
-
-        response = self.anthropic_client.messages.create(
-            model=params.get('model', 'claude-3-5-sonnet-20240620'),
-            max_tokens=params.get('max_tokens', 1000),
-            temperature=params.get('temperature', 0.7),
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
-        )
-        return response.content[0].text
-
-    def _generate_openai_response(self, prompt: str, params: Dict[str, Any]) -> str:
-        """
-        Generate response using OpenAI's models.
+        # Default ticket details
+        ticket_details = {
+            'category': 'Unclassified',
+            'urgency': 'Low',
+            'support_group': 'General Support',
+            'summary': analysis[:300],
+            'confidence': 0.0
+        }
         
-        :param prompt: Input prompt
-        :param params: Configuration parameters
-        :return: Generated response
-        """
-        if not openai.api_key:
-            raise ValueError("OpenAI client not configured")
-
-        response = openai.ChatCompletion.create(
-            model=params.get('model', 'gpt-4-turbo'),
-            max_tokens=params.get('max_tokens', 1000),
-            temperature=params.get('temperature', 0.7),
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
-        )
-        return response.choices[0].message.content
-
-    def _generate_google_response(self, prompt: str, params: Dict[str, Any]) -> str:
-        """
-        Generate response using Google's Gemini model.
+        # Keyword matching with semantic similarity
+        best_match = {
+            'similarity': 0.0,
+            'config': None
+        }
         
-        :param prompt: Input prompt
-        :param params: Configuration parameters
-        :return: Generated response
+        # Iterate through prompt configurations
+        for config in self.prompts_config.get('prompts_keywords', []):
+            keywords = config.get('keywords', [])
+            
+            # Calculate semantic similarity
+            similarity = self.semantic_similarity(preprocessed_content, keywords)
+            
+            # Update best match
+            if similarity > best_match['similarity']:
+                best_match = {
+                    'similarity': similarity,
+                    'config': config
+                }
+        
+        # Update ticket details if a good match is found
+        if best_match['similarity'] > 0.5:
+            match_config = best_match['config']
+            ticket_details.update({
+                'category': match_config.get('category', ticket_details['category']),
+                'support_group': match_config.get('support_group', ticket_details['support_group']),
+                'confidence': best_match['similarity']
+            })
+        
+        # Adjust urgency based on intent features
+        if intent_features['urgency_indicators'] > 0.3:
+            ticket_details['urgency'] = 'High'
+        elif intent_features['urgency_indicators'] > 0.1:
+            ticket_details['urgency'] = 'Medium'
+        
+        # Incorporate named entities for additional context
+        if entities['PRODUCT']:
+            ticket_details['summary'] += f" Product(s) mentioned: {', '.join(entities['PRODUCT'])}"
+        
+        # Add technical complexity to summary
+        if intent_features['technical_complexity'] > 0.5:
+            ticket_details['summary'] += " High technical complexity detected."
+        
+        return ticket_details
+    
+    def create_service_ticket(self, email_content: str) -> None:
         """
-        if not genai:
-            raise ValueError("Google client not configured")
+        Create a service ticket from email content
+        
+        :param email_content: Raw email content
+        """
+        # Analyze content
+        ticket_details = self.analyze_email_content(email_content)
+        
+        # Prepare ticket for CSV
+        ticket_row = {
+            'Timestamp': datetime.now().isoformat(),
+            'Category': ticket_details['category'],
+            'Support Group': ticket_details['support_group'],
+            'Urgency': ticket_details['urgency'],
+            'Confidence': ticket_details['confidence'],
+            'Summary': ticket_details['summary'],
+            'Original Content': email_content
+        }
+        
+        # Write to CSV
+        file_exists = os.path.exists(self.output_ticket_file)
+        with open(self.output_ticket_file, 'a', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=ticket_row.keys())
+            if not file_exists:
+                writer.writeheader()
+            writer.writerow(ticket_row)
+        
+        print(f"Service ticket created: {ticket_details['support_group']} - {ticket_details['category']} (Confidence: {ticket_details['confidence']:.2f})")
 
-        model = genai.GenerativeModel(
-            params.get('model', 'gemini-pro')
-        )
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.types.GenerationConfig(
-                max_output_tokens=params.get('max_tokens', 1000),
-                temperature=params.get('temperature', 0.7)
-            )
-        )
-        return response.text
-
+# Usage
 def main():
+    # You would replace these with your actual values
+    GEMINI_API_KEY = 'YOUR_GEMINI_API_KEY'
+    PROMPTS_FILE = 'prompts_keywords.json'
     
-    processor = AIPromptProcessor()
-    
-    try:
-        # Read prompts from file
-        prompts_file = 'prompts.txt'
-        prompts = processor.read_prompts_from_file(prompts_file)
-        keywords = ['technology', 'innovation', 'AI']
-        results = processor.process_prompts(prompts, keywords)
-        processor.save_results(results, 'ai_responses.json')
-        #processor.process_prompts(
-            input_file='prompts.json', 
-            output_file='responses.json'
-        )
-    #except Exception as e:
-    #    print(f"An error occurred: {e}")
-    
+    # Initialize processor
+    ticket_processor = NLPTicketProcessor(
+        gemini_api_key=GEMINI_API_KEY,
+        prompts_keywords_file=PROMPTS_FILE
+    )
+    keywords = ["Problem", "Issue", "request", "Amount", "Ëxpiration Date", "Name", "Deal Name", "Resolution"]
+    #Email content
+    with open(EmailService.process_email_folder("/",keywords), 'r') as f:
+            sample_emails = json.load(f)   
+    # Create service tickets
+    for email in sample_emails.get('email_data', [])::
+        ticket_processor.create_service_ticket(email)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
