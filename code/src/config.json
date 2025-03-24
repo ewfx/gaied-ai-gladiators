@@ -1,0 +1,22 @@
+{
+    "providers": {
+        "anthropic": {
+            "api_key": "YOUR_ANTHROPIC_API_KEY",
+            "model": "claude-3-5-sonnet-20240620",
+            "temperature": 0.7,
+            "max_tokens": 1000
+        },
+        "openai": {
+            "api_key": "YOUR_OPENAI_API_KEY",
+            "model": "gpt-4-turbo",
+            "temperature": 0.7,
+            "max_tokens": 1000
+        },
+        "google": {
+            "api_key": "YOUR_GOOGLE_API_KEY",
+            "model": "gemini-pro",
+            "temperature": 0.7,
+            "max_tokens": 1000
+        }
+    }
+}
