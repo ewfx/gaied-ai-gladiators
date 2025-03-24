@@ -249,7 +249,8 @@ class NLPTicketProcessor:
         if best_match['similarity'] > 0.5:
             match_config = best_match['config']
             ticket_details.update({
-                'category': match_config.get('category', ticket_details['category']),
+                'requestType': match_config.get('category', ticket_details['requestType']),
+		'subRequestType': match_config.get('category', ticket_details['subRequestType']),
                 'support_group': match_config.get('support_group', ticket_details['support_group']),
                 'confidence': best_match['similarity']
             })
@@ -282,7 +283,8 @@ class NLPTicketProcessor:
         # Prepare ticket for CSV
         ticket_row = {
             'Timestamp': datetime.now().isoformat(),
-            'Category': ticket_details['category'],
+            'Request Type': ticket_details['requestType'],
+	    'Sub Request Type': ticket_details['subRequestType'],
             'Support Group': ticket_details['support_group'],
             'Urgency': ticket_details['urgency'],
             'Confidence': ticket_details['confidence'],
