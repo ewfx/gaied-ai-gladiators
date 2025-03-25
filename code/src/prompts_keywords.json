@@ -3,6 +3,7 @@
     "requestType": "Adjustment",
     "subRequestType": "",
     "support_group": "Loan Management Team",
+    "prompt": "Identify if this document contains an Adjustment request. Look for phrases indicating corrections to loan records, administrative changes, or minor modifications that don't affect principal or payment structure. Extract the specific adjustment requested, affected accounts, and justification.",
     "keywords": [
       "Record correction",
       "Administrative amendment",
@@ -10,96 +11,80 @@
       "Clerical error",
       "Rate adjustment",
       "Maturity date correction",
-      "Borrower information update",
-      "Loan data fix",
-      "Account rectification",
-      "Interest recalculation",
-      "Payment schedule revision",
-      "Error resolution"
+      "Borrower information update"
     ]
   },
   {
     "requestType": "AU Transfer",
-    "subRequestType": "",
     "support_group": "Loan Management Team",
+    "prompt": "Determine if this communication requests an Administrative Unit Transfer. Extract the originating unit, destination unit, affected account numbers, transfer timeline, and authorization level.",
     "keywords": [
       "Portfolio transfer",
       "Desk reassignment",
       "Servicing migration",
       "Relationship manager change",
       "Branch reassignment",
-      "Departmental transfer",
-      "Unit shift",
-      "Loan team change",
-      "Operational move",
-      "Servicing handover"
+      "Departmental transfer"
     ]
   },
   {
     "requestType": "Closing Notice",
     "subRequestType": "Reallocation Fees",
     "support_group": "Loan Closure Team",
+    "prompt": "Identify if this document requests reallocation of closing fees. Extract fee amounts, parties involved, allocation percentages, and justification for reallocation.",
     "keywords": [
       "Fee redistribution",
-      "Closing cost allocation",
-      "Fee splitting",
-      "Third-party fee assignment",
-      "Expense adjustment",
-      "Cost division",
-      "Payment reassignment",
-      "Closing charge modification"
+      "closing cost allocation",
+      "fee splitting",
+      "third-party fee assignment"
     ]
   },
   {
     "requestType": "Closing Notice",
     "subRequestType": "Amendment Fees",
     "support_group": "Loan Closure Team",
+    "prompt": "Determine if this communication relates to amendment fees for closing documents. Extract fee amount, amendment type, affected documents, and party responsible for payment.",
     "keywords": [
       "Document revision fee",
-      "Amendment charge",
-      "Modification cost",
-      "Documentation change fee",
-      "Contract update charge",
-      "Loan agreement revision fee"
+      "amendment charge",
+      "modification cost",
+      "documentation change fee"
     ]
   },
   {
     "requestType": "Closing Notice",
-    "subRequestType": "Principal Reallocation",
+    "subRequestType": "Amendment Fees",
     "support_group": "Loan Closure Team",
+    "prompt": "Identify if this document requests reallocation of principal at closing. Extract original allocation, requested allocation, affected accounts, and authorization level.",
     "keywords": [
       "Principal redistribution",
-      "Loan amount reallocation",
-      "Disbursement adjustment",
-      "Funding reapportionment",
-      "Reassignment of loan funds",
-      "Capital allocation shift"
+      "loan amount reallocation",
+      "disbursement adjustment",
+      "funding reapportionment"
     ]
   },
   {
     "requestType": "Commitment Change",
     "subRequestType": "Cashless Roll",
     "support_group": "Fee Management Team",
+    "prompt": "Determine if this document requests a Cashless Roll. Extract current commitment terms, new requested terms, effective date, and authorizing parties.",
     "keywords": [
       "Term conversion",
-      "Debt rollover",
-      "Refinancing in place",
-      "Commitment extension",
-      "Loan renewal",
-      "Non-cash restructuring"
+      "debt rollover",
+      "refinancing in place",
+      "commitment extension"
     ]
   },
   {
     "requestType": "Commitment Change",
     "subRequestType": "Decrease",
     "support_group": "Fee Management Team",
+    "prompt": "Identify if this communication requests a decrease in commitment amount. Extract current commitment amount, requested reduced amount, effective date, and reason for reduction",
     "keywords": [
       "Commitment reduction",
-      "Facility decrease",
-      "Credit line reduction",
-      "Available funds decrease",
-      "Loan limit cut",
-      "Funding shrinkage"
+      "facility decrease",
+      "credit line reduction",
+      "available funds decrease"
     ]
   },
   {
@@ -108,11 +93,9 @@
     "support_group": "Fee Management Team",
     "keywords": [
       "Commitment increase",
-      "Credit line expansion",
-      "Facility upsize",
-      "Available funds addition",
-      "Loan capacity boost",
-      "Funding enhancement"
+      "credit line expansion",
+      "facility upsize",
+      "available funds addition"
     ]
   },
   {
@@ -121,11 +104,10 @@
     "support_group": "Payments Team",
     "keywords": [
       "Maintenance fee",
-      "Servicing fee",
-      "Annual fee",
-      "Commitment fee",
-      "Administration charge",
-      "Processing charge"
+      "servicing fee",
+      "annual fee",
+      "commitment fee",
+      "administration charge"
     ]
   },
   {
@@ -134,11 +116,9 @@
     "support_group": "Payments Team",
     "keywords": [
       "LC issuance fee",
-      "Standby LC fee",
-      "Documentary credit charge",
-      "LC amendment fee",
-      "Bank guarantee fee",
-      "Letter of credit processing cost"
+      "standby LC fee",
+      "documentary credit charge",
+      "LC amendment fee"
     ]
   },
   {
@@ -147,11 +127,9 @@
     "support_group": "Payments Team",
     "keywords": [
       "Principal payment",
-      "Principal reduction",
-      "Loan paydown",
-      "Balance reduction",
-      "Debt principal settlement",
-      "Capital repayment"
+      "principal reduction",
+      "loan paydown",
+      "balance reduction"
     ]
   },
   {
@@ -160,11 +138,9 @@
     "support_group": "Payments Team",
     "keywords": [
       "Interest payment",
-      "Interest settlement",
-      "Accrued interest",
-      "Interest remittance",
-      "Loan interest charge",
-      "Periodic interest payment"
+      "interest settlement",
+      "accrued interest",
+      "interest remittance"
     ]
   },
   {
@@ -173,11 +149,9 @@
     "support_group": "Payments Team",
     "keywords": [
       "P&I payment",
-      "Scheduled payment",
-      "Regular installment",
-      "Combined payment",
-      "Total loan repayment",
-      "Principal and interest transaction"
+      "scheduled payment",
+      "regular installment",
+      "combined payment"
     ]
   },
   {
@@ -186,11 +160,9 @@
     "support_group": "Foreign Exchange Team",
     "keywords": [
       "Full payment",
-      "Comprehensive settlement",
-      "All-inclusive payment",
-      "Complete installment",
-      "Final disbursement",
-      "Loan closure transfer"
+      "comprehensive settlement",
+      "all-inclusive payment",
+      "complete installment"
     ]
   },
   {
@@ -199,11 +171,9 @@
     "support_group": "Foreign Exchange Team",
     "keywords": [
       "Same-day settlement",
-      "Urgent transfer",
-      "Time-critical disbursement",
-      "Deadline-sensitive payment",
-      "Cross-border remittance",
-      "Foreign exchange transfer"
+      "urgent transfer",
+      "time-critical disbursement",
+      "deadline-sensitive payment"
     ]
   }
 ]
