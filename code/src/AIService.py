@@ -8,6 +8,7 @@ from datetime import datetime
 import spacy
 import numpy as np
 import EmailService
+import uuid
 
 # Download all necessary NLTK resources
 try:
@@ -246,7 +247,7 @@ class NLPTicketProcessor:
             'category': 'Unclassified',
             'urgency': 'Low',
             'support_group': 'General Support',
-            'summary': analysis[:300],
+            'summary': analysis[:1500],
             'confidence': 0.0
         }
         
@@ -306,8 +307,12 @@ class NLPTicketProcessor:
             # Analyze content
             ticket_details = self.analyze_email_content(email_content)
             
+            # Generate a unique request ID
+            request_id = str(np.random.randint(100000, 999999))
+            
             # Prepare ticket for CSV with default values for missing fields
             ticket_row = {
+                'Request ID': request_id,
                 'Timestamp': datetime.now().isoformat(),
                 'Request Type': ticket_details.get('requestType', 'Unclassified'),
                 'Sub Request Type': ticket_details.get('subRequestType', 'General'),
@@ -315,7 +320,7 @@ class NLPTicketProcessor:
                 'Urgency': ticket_details.get('urgency', 'Medium'),
                 'Confidence': ticket_details.get('confidence', 0.0),
                 'Summary': ticket_details.get('summary', 'No summary available'),
-                'Original Content': email_content.get('body', '')
+                # 'Original Content': email_content.get('body', '')
             }
             
             # Write to CSV
@@ -332,6 +337,7 @@ class NLPTicketProcessor:
             print(f"Error creating service ticket: {e}")
             # Create a fallback ticket
             ticket_row = {
+                'Request ID': request_id,
                 'Timestamp': datetime.now().isoformat(),
                 'Request Type': 'Error',
                 'Sub Request Type': 'System Error',
@@ -339,7 +345,7 @@ class NLPTicketProcessor:
                 'Urgency': 'Medium',
                 'Confidence': 0.0,
                 'Summary': f'Error processing ticket: {str(e)}',
-                'Original Content': email_content.get('body', '')
+                # 'Original Content': email_content.get('body', '')
             }
             # Write fallback ticket to CSV
             with open(self.output_ticket_file, 'a', newline='', encoding='utf-8') as f:

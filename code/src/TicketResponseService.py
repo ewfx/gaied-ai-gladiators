@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 from typing import List, Dict
 import os
@@ -7,8 +8,15 @@ from AIService import NLPTicketProcessor
 import json
 import EmailService
 import logging
-
 app = FastAPI(title="Ticket Response Service")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class TicketResponseService:
     def __init__(self):
@@ -19,7 +27,7 @@ class TicketResponseService:
         self.email_folder = os.path.join(self.base_dir, "../../emails")
         
         self.keywords = ["Problem", "Issue", "request", "Amount", "Expiration Date", 
-                        "Name", "Deal Name", "Resolution", "Grievance"]
+                        "Name", "Deal Name", "Resolution", "Grievance", "Support"]
         
         # Load configuration
         try:
@@ -41,10 +49,6 @@ class TicketResponseService:
             logging.error(f"Configuration file not found: {e}")
             raise HTTPException(status_code=500, 
                               detail=f"Configuration file not found: {e}")
-        except json.JSONDecodeError as e:
-            logging.error(f"Invalid JSON in configuration file: {e}")
-            raise HTTPException(status_code=500, 
-                              detail=f"Invalid JSON in configuration file: {e}")
         except Exception as e:
             logging.error(f"Error initializing service: {e}")
             raise HTTPException(status_code=500, 
@@ -60,16 +64,34 @@ class TicketResponseService:
         with open(email_file, 'r') as f:
             sample_emails = json.load(f)
         
-        # print(sample_emails)
+        processed_emails = set()
         for email in sample_emails:
-            self.ai_service.create_service_ticket(email.get("email_data", ""))
+            email_data = email.get("email_data", "")
+            email_data_str = json.dumps(email_data, sort_keys=True)  # Convert to a hashable type
+            if email_data_str not in processed_emails:
+                self.ai_service.create_service_ticket(email_data)
+                processed_emails.add(email_data_str)
 
     def load_tickets(self) -> List[Dict]:
         try:
             if not os.path.exists(self.csv_path):
                 return []
             df = pd.read_csv(self.csv_path)
-            return df.to_dict(orient='records')
+            # Convert DataFrame to structured dictionaries
+            tickets = []
+            for _, row in df.iterrows():
+                ticket = {
+                    'request_id': row.get('Request ID', ''),
+                    'timestamp': row.get('Timestamp', ''),
+                    'request_type': row.get('Request Type', 'Unclassified'),
+                    'sub_request_type': row.get('Sub Request Type', 'General'),
+                    'support_group': row.get('Support Group', 'General Support'),
+                    'urgency': row.get('Urgency', 'Medium'),
+                    'confidence': float(row.get('Confidence', 0.0)),
+                    'summary': row.get('Summary', 'No summary available'),
+                }
+                tickets.append(ticket)
+            return tickets
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error loading tickets: {str(e)}")
 
