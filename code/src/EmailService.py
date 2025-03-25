@@ -64,24 +64,22 @@ def extract_email_data(file_path):
                 subject = msg["Subject"]
                 from_addr = msg["From"]
                 to_addr = msg["To"]
-                body =  msg.get_payload(decode=True);
-                if  is_not_duplicate_email(subject,body)
-                    body=""
-                    if msg.is_multipart():
-                        for part in msg.walk():
-                            content_type = part.get_content_type()
-                            content_disposition = str(part.get("Content-Disposition"))
-                            if "text/plain" in content_type and "attachment" not in content_disposition:
-                                body = part.get_payload(decode=True).decode()
-                            elif "text/html" in content_type and "attachment" not in content_disposition:
-                                body = part.get_payload(decode=True).decode()
-                            elif "application/" in content_type or "image/" in content_type or "text/calendar" in content_type:
-                                attachments.append({
-                                    "name": part.get_filename(),
-                                    "content": part.get_payload(decode=True),
-                                })
-                    else:
-                        body = msg.get_payload(decode=True).decode()
+                body = ""
+                if msg.is_multipart():
+                    for part in msg.walk():
+                        content_type = part.get_content_type()
+                        content_disposition = str(part.get("Content-Disposition"))
+                        if "text/plain" in content_type and "attachment" not in content_disposition:
+                            body = part.get_payload(decode=True).decode()
+                        elif "text/html" in content_type and "attachment" not in content_disposition:
+                            body = part.get_payload(decode=True).decode()
+                        elif "application/" in content_type or "image/" in content_type or "text/calendar" in content_type:
+                            attachments.append({
+                                "name": part.get_filename(),
+                                "content": part.get_payload(decode=True),
+                            })
+                else:
+                    body = msg.get_payload(decode=True).decode()
 
         else:
             return None
@@ -98,19 +96,6 @@ def extract_email_data(file_path):
     except Exception as e:
         print(f"Error processing {file_path}: {e}")
         return None
-
-def is_not_duplicate_email(subject,body):
-     # Check if the email is a reply based on subject and body
-    if subject.startswith("Re:") or "On" in body:
-        return False
-    # Check if the email is forwarded based on subject and body
-    elif subject.startswith("Fwd:") or "Forwarded message" in body:
-        return False
-    else:
-        return True
-
-
-
 
 def extract_keywords(email_data, keywords):
     """Extracts keyword-related content from email body and attachments."""
