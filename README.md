@@ -58,7 +58,7 @@ Parses emails, extracts attachments
 Preprocesses text for optimal AI analysis
 
 2. **AI Classification Service**
-Utilizes LLMs (OpenAI's GPT, LLaMA, or Gemini) with custom prompt engineering
+Utilizes LLMs (OpenAI's GPT,Gemini Pro,NLTK ,spacy) with custom prompt engineering
 Implements a classification pipeline with context-aware prompting
 Features confidence scoring algorithms
 Includes duplicate detection logic
@@ -132,12 +132,12 @@ Socket.IO for real-time updates
 ## 👥 Team
 Our diverse team brings together expertise in AI, software engineering, and financial services:
 
-Sarma, K V Subramanyeswar      - Lead Software Engineer
+K V Subramanyeswar Sarma (Lead Software Engineer): A seasoned leader with deep technical expertise in software development, driving the architectural and strategic direction of our project.
 
-Antil Siddhant                 - Software Engineer   
+Siddhant Antil (Software Engineer): A dynamic software engineer contributing fresh perspectives and coding expertise to accelerate development.
 
-Potnuru,Santosh Kumar          - Lead Software Engineer
+Santosh Kumar Potnuru (Lead Software Engineer): An experienced engineer providing robust design and implementation strategies to enhance system efficiency.
 
-Bikkina, Sri Durga Sravanthi   - Senior Software Engineer
+Sri Durga Sravanthi Bikkina (Senior Software Engineer):A mainframe modernization expert now exploring the AI/ML space, bringing a unique blend of legacy transformation knowledge and innovative AI-driven solutions.
 
-Lokanandi,Dharanidhar L         - Senior Software Engineer
+Dharanidhar L Lokanandi (Senior Software Engineer):  A skilled Scrum Master facilitating agile execution while leading documentation efforts to ensure clear and structured project artifacts.
