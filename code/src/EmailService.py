@@ -119,25 +119,30 @@ def process_email_folder(folder_path, keywords, output_file="extracted_data.json
     for filename in os.listdir(folder_path):
         if filename.lower().endswith((".msg", ".eml")):
             file_path = os.path.join(folder_path, filename)
-            email_data = extract_email_data(file_path)
-            if email_data:
-                keyword_data = extract_keywords(email_data, keywords)
-                results.append({
-                    "file": filename,
-                    "email_data": email_data,
-                    "keyword_data": keyword_data,
-                })
+            try:
+                email_data = extract_email_data(file_path)
+                if email_data:
+                    keyword_data = extract_keywords(email_data, keywords)
+                    results.append({
+                        "file": filename,
+                        "email_data": email_data,
+                        "keyword_data": keyword_data,
+                    })
+            except Exception as e:
+                print(f"Error processing {file_path}: {e}")
+                continue
 
     with open(output_file, "w") as f:
         json.dump(results, f, indent=4)
+    f.close()
     print(f"Extracted data saved to {output_file}")
 
-# Example usage:
-if __name__ == "__main__":
-    folder_path = "email_folder"
-    keywords = ["Problem", "Issue", "request", "Amount", "Ëxpiration Date", "Name", "Deal Name"]
+# # Example usage:
+# if __name__ == "__main__":
+#     folder_path = "email_folder"
+#     keywords = ["Problem", "Issue", "request", "Amount", "Ëxpiration Date", "Name", "Deal Name"]
 
-    if not os.path.exists(folder_path):
-        os.makedirs(folder_path)
+#     if not os.path.exists(folder_path):
+#         os.makedirs(folder_path)
 
-    process_email_folder(folder_path, keywords)
+#     process_email_folder(folder_path, keywords)

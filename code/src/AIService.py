@@ -9,10 +9,16 @@ import spacy
 import numpy as np
 import EmailService
 
-# Download necessary NLTK resources
-nltk.download('punkt')
-nltk.download('averaged_perceptron_tagger')
-nltk.download('wordnet')
+# Download all necessary NLTK resources
+try:
+    nltk.download('punkt')
+    nltk.download('averaged_perceptron_tagger')
+    nltk.download('wordnet')
+    nltk.download('punkt_tab')
+    nltk.download('tokenizers/punkt/PY3/english.pickle')
+    nltk.download('averaged_perceptron_tagger_eng')
+except Exception as e:
+    print(f"Error downloading NLTK resources: {e}")
 
 import google.generativeai as genai
 from google.generativeai.types import GenerateContentResponse
@@ -40,7 +46,10 @@ class NLPTicketProcessor:
         self.output_ticket_file = output_ticket_file
         
         # Initialize Gemini model
-        self.model = genai.GenerativeModel('gemini-pro')
+        # models = genai.list_models()
+        # for model in models:
+        #     print(model.name)
+        self.model = genai.GenerativeModel('gemini-2.0-flash')
         
         # Load spaCy model for advanced NLP
         try:
@@ -102,6 +111,8 @@ class NLPTicketProcessor:
         # Convert text and keywords to spaCy docs
         text_doc = self.nlp(processed_text)
         keyword_docs = [self.nlp(kw) for kw in keywords]
+        # print(keyword_docs)
+
         
         # Calculate maximum similarity
         max_similarity = 0
@@ -118,22 +129,28 @@ class NLPTicketProcessor:
         :param text: Input text
         :return: Dictionary of intent features
         """
-        # Tokenize and tag parts of speech
-        tokens = nltk.word_tokenize(text)
-        pos_tags = nltk.pos_tag(tokens)
-        
-        # Feature extraction
+        # Initialize features
         features = {
             'urgency_indicators': 0.0,
             'technical_complexity': 0.0,
             'problem_specificity': 0.0
         }
         
+        # Handle empty or None text
+        if not text or not text.strip():
+            return features
+        
+        # Tokenize and tag parts of speech
+        tokens = nltk.word_tokenize(text)
+        if not tokens:  # If no tokens, return default features
+            return features
+            
+        pos_tags = nltk.pos_tag(tokens)
+        
         # Urgency indicators
         urgency_words = ['urgent', 'critical', 'immediately', 'asap', 'now']
-        features['urgency_indicators'] = sum(
-            1 for word, _ in pos_tags if word.lower() in urgency_words
-        ) / len(tokens)
+        urgency_count = sum(1 for word, _ in pos_tags if word.lower() in urgency_words)
+        features['urgency_indicators'] = urgency_count / len(tokens) if tokens else 0.0
         
         # Technical complexity
         technical_pos_tags = ['NN', 'NNS', 'NNP']  # Nouns
@@ -141,33 +158,41 @@ class NLPTicketProcessor:
             word for word, pos in pos_tags 
             if pos in technical_pos_tags
         ]
-        features['technical_complexity'] = len(set(technical_tokens)) / len(tokens)
+        features['technical_complexity'] = len(set(technical_tokens)) / len(tokens) if tokens else 0.0
         
         # Problem specificity (based on noun phrases and descriptive words)
-        features['problem_specificity'] = len(set(technical_tokens)) / max(len(tokens), 1)
+        features['problem_specificity'] = len(set(technical_tokens)) / len(tokens) if tokens else 0.0
         
         return features
     
-    def analyze_email_content(self, email_content: str) -> Dict[str, str]:
+    def analyze_email_content(self, email_content: Dict[str, str]) -> Dict[str, str]:
         """
         Advanced analysis of email content
         
         :param email_content: Raw email content
         :return: Dictionary with detailed ticket details
         """
-        # Preprocess email content
-        preprocessed_content = self.preprocess_text(email_content)
+        # Extract the body, subject, and attachments of the email
+        email_body = email_content.get('body', '')
+        email_subject = email_content.get('subject', '')
+        email_attachments = email_content.get('attachments', '')
+
+        # Combine body, subject, and attachments into a single text
+        combined_content = f"{email_subject} {email_body} {email_attachments}"
+        
+        # Preprocess combined email content
+        preprocessed_content = self.preprocess_text(combined_content)
         
         # Extract named entities
-        entities = self.extract_named_entities(email_content)
+        entities = self.extract_named_entities(combined_content)
         
         # Extract intent features
-        intent_features = self.extract_intent_features(email_content)
+        intent_features = self.extract_intent_features(combined_content)
         
         # Prepare comprehensive prompt for Gemini
         analysis_prompt = f"""Detailed analysis of the following email content:
         
-        Content: {email_content}
+        Content: {combined_content}
         
         Provide a comprehensive analysis considering:
         1. Primary issue category
@@ -232,7 +257,7 @@ class NLPTicketProcessor:
         }
         
         # Iterate through prompt configurations
-        for config in self.prompts_config.get('prompts_keywords', []):
+        for config in self.prompts_config:
             keywords = config.get('keywords', [])
             
             # Calculate semantic similarity
@@ -249,8 +274,8 @@ class NLPTicketProcessor:
         if best_match['similarity'] > 0.5:
             match_config = best_match['config']
             ticket_details.update({
-                'requestType': match_config.get('category', ticket_details['requestType']),
-		'subRequestType': match_config.get('category', ticket_details['subRequestType']),
+                'requestType': match_config.get('requestType', ticket_details['category']),
+                'subRequestType': match_config.get('subRequestType', ticket_details['category']),
                 'support_group': match_config.get('support_group', ticket_details['support_group']),
                 'confidence': best_match['similarity']
             })
@@ -271,55 +296,80 @@ class NLPTicketProcessor:
         
         return ticket_details
     
-    def create_service_ticket(self, email_content: str) -> None:
+    def create_service_ticket(self, email_content: Dict[str, str]) -> None:
         """
         Create a service ticket from email content
         
-        :param email_content: Raw email content
+        :param email_content: Raw email content as a dictionary
         """
-        # Analyze content
-        ticket_details = self.analyze_email_content(email_content)
+        try:
+            # Analyze content
+            ticket_details = self.analyze_email_content(email_content)
+            
+            # Prepare ticket for CSV with default values for missing fields
+            ticket_row = {
+                'Timestamp': datetime.now().isoformat(),
+                'Request Type': ticket_details.get('requestType', 'Unclassified'),
+                'Sub Request Type': ticket_details.get('subRequestType', 'General'),
+                'Support Group': ticket_details.get('support_group', 'General Support'),
+                'Urgency': ticket_details.get('urgency', 'Medium'),
+                'Confidence': ticket_details.get('confidence', 0.0),
+                'Summary': ticket_details.get('summary', 'No summary available'),
+                'Original Content': email_content.get('body', '')
+            }
+            
+            # Write to CSV
+            file_exists = os.path.exists(self.output_ticket_file)
+            with open(self.output_ticket_file, 'a', newline='', encoding='utf-8') as f:
+                writer = csv.DictWriter(f, fieldnames=ticket_row.keys())
+                if not file_exists:
+                    writer.writeheader()
+                writer.writerow(ticket_row)
+            
+            print(f"Service ticket created: {ticket_row['Support Group']} - {ticket_row['Request Type']} (Confidence: {ticket_row['Confidence']:.2f})")
         
-        # Prepare ticket for CSV
-        ticket_row = {
-            'Timestamp': datetime.now().isoformat(),
-            'Request Type': ticket_details['requestType'],
-	    'Sub Request Type': ticket_details['subRequestType'],
-            'Support Group': ticket_details['support_group'],
-            'Urgency': ticket_details['urgency'],
-            'Confidence': ticket_details['confidence'],
-            'Summary': ticket_details['summary'],
-            'Original Content': email_content
-        }
-        
-        # Write to CSV
-        file_exists = os.path.exists(self.output_ticket_file)
-        with open(self.output_ticket_file, 'a', newline='', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, fieldnames=ticket_row.keys())
-            if not file_exists:
-                writer.writeheader()
-            writer.writerow(ticket_row)
-        
-        print(f"Service ticket created: {ticket_details['support_group']} - {ticket_details['category']} (Confidence: {ticket_details['confidence']:.2f})")
+        except Exception as e:
+            print(f"Error creating service ticket: {e}")
+            # Create a fallback ticket
+            ticket_row = {
+                'Timestamp': datetime.now().isoformat(),
+                'Request Type': 'Error',
+                'Sub Request Type': 'System Error',
+                'Support Group': 'IT Support',
+                'Urgency': 'Medium',
+                'Confidence': 0.0,
+                'Summary': f'Error processing ticket: {str(e)}',
+                'Original Content': email_content.get('body', '')
+            }
+            # Write fallback ticket to CSV
+            with open(self.output_ticket_file, 'a', newline='', encoding='utf-8') as f:
+                writer = csv.DictWriter(f, fieldnames=ticket_row.keys())
+                if not os.path.exists(self.output_ticket_file):
+                    writer.writeheader()
+                writer.writerow(ticket_row)
 
-# Usage
-def main():
-    # You would replace these with your actual values
-    GEMINI_API_KEY = 'YOUR_GEMINI_API_KEY'
-    PROMPTS_FILE = 'prompts_keywords.json'
+# # Usage
+# def main():
+#     # You would replace these with your actual values
+#     # Load configuration from config.json
+#     with open('config.json', 'r') as config_file:
+#         config = json.load(config_file)
     
-    # Initialize processor
-    ticket_processor = NLPTicketProcessor(
-        gemini_api_key=GEMINI_API_KEY,
-        prompts_keywords_file=PROMPTS_FILE
-    )
-    keywords = ["Problem", "Issue", "request", "Amount", "Ëxpiration Date", "Name", "Deal Name", "Resolution"]
-    #Email content
-    with open(EmailService.process_email_folder("/",keywords), 'r') as f:
-            sample_emails = json.load(f)   
-    # Create service tickets
-    for email in sample_emails.get('email_data', [])::
-        ticket_processor.create_service_ticket(email)
+#     GEMINI_API_KEY = config['providers']['google']['api_key']
+#     PROMPTS_FILE = "prompts_keywords.json"
+    
+#     # Initialize processor
+#     ticket_processor = NLPTicketProcessor(
+#         gemini_api_key=GEMINI_API_KEY,
+#         prompts_keywords_file=PROMPTS_FILE
+#     )
+#     keywords = ["Problem", "Issue", "request", "Amount", "Ëxpiration Date", "Name", "Deal Name", "Resolution", "Grievence"]
+#     #Email content
+#     with open(EmailService.process_email_folder("/",keywords), 'r') as f:
+#             sample_emails = json.load(f)   
+#     # Create service tickets
+#     for email in sample_emails:
+#         ticket_processor.create_service_ticket(email)
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
