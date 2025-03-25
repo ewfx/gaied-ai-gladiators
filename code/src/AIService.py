@@ -53,11 +53,11 @@ class NLPTicketProcessor:
         
         # Load spaCy model for advanced NLP
         try:
-            self.nlp = spacy.load('en_core_web_sm')
+            self.nlp = spacy.load('en_core_web_md')
         except OSError:
             print("Downloading spaCy model...")
-            spacy.cli.download('en_core_web_sm')
-            self.nlp = spacy.load('en_core_web_sm')
+            spacy.cli.download('en_core_web_md')
+            self.nlp = spacy.load('en_core_web_md')
     
     def preprocess_text(self, text: str) -> str:
         """
