@@ -81,55 +81,114 @@ System Integration - Designing clean interfaces between services while maintaini
 Handling Edge Cases - Building resilience for unusual or ambiguous requests that don't clearly fall into predefined categories.
 
 ## 🏃 How to Run
-Prerequisites
+1. Clone the repository:
+```powershell
+git clone https://github.com/ewfx/gaied-ai-gladiators.git
+cd gaied-ai-gladiators
+```
 
-Python 3.8+
-Docker and Docker Compose
-OpenAI API key or other LLM API credentials
-Node.js 16+ (for the frontend dashboard)
+2. Create and activate a virtual environment:
+```powershell
+python -m venv wfhack
+.\wfhack\Scripts\Activate.ps1
+```
 
-Installation
-Clone the repository:
+3. Install required packages:
+```powershell
+pip install -r requirements.txt
+```
 
-bashCopygit clone https://github.com/yourusername/genai-loan-classification.git
-cd genai-loan-classification
+4. Download required NLP models:
+```powershell
+python -m spacy download en_core_web_md
+python -c "import nltk; nltk.download('punkt'); nltk.download('averaged_perceptron_tagger'); nltk.download('wordnet')"
+```
 
-Set up environment variables:
-bashCopycp .env.example .env
-Edit .env with your API keys and configuration
-Start the services using Docker Compose:
-bashCopydocker-compose up -d
+## Configuration
 
-Access the dashboard:
-Copyhttp://localhost:3000
-Configuration
-The system can be configured through the .env file and config/ directory:
+1. Create a `config.json` in the `code/src` directory:
+```json
+{
+    "providers": {
+        "google": {
+            "api_key": "your-gemini-api-key"
+        }
+    }
+}
+```
 
-config/request_types.json - Defines the request types and sub-request types
-config/prompts.json - Contains the prompt templates for the AI service
-config/integration.json - Specifies integration endpoints and formats
+2. Place your email files in the `emails` directory at the project root.
+
+## Running the Application
+
+1. Activate the virtual environment (if not already activated):
+```powershell
+.\wfhack\Scripts\Activate.ps1
+```
+
+2. Navigate to the source directory:
+```powershell
+cd code\src
+```
+
+3. Start the server:
+```powershell
+python -m uvicorn TicketResponseService:app --reload
+```
+
+The server will start at http://127.0.0.1:8000
+
+## Available Endpoints
+
+- `GET /tickets/` - Get all processed tickets
+- `GET /tickets/{ticket_id}` - Get a specific ticket
+- `GET /process-status` - Check email processing status
+- `POST /process-emails` - Manually trigger email processing
+
+## API Documentation
+
+Once the server is running, you can access:
+- Swagger API docs: http://127.0.0.1:8000/docs
+
+## Frontend Setup
+
+The frontend is built with React + TypeScript + Vite and uses Material-UI components.
+
+### Prerequisites
+- Node.js 18 or higher
+- npm 9 or higher
+
+### Installation
+
+1. Navigate to the frontend directory:
+```powershell
+cd gaied-ai-gladiators/code/frontend
+```
+
+2. Install dependencies:
+```powershell
+npm install
+```
+
+### Running the Frontend
+
+1. Start the development server:
+```powershell
+npm run dev
+```
+The frontend will be available at http://localhost:5173
+
 
 
 ## 🏗️ Tech Stack
-**Email Processing:**
-Python with email, mime, and pytesseract libraries
-Tesseract OCR
-PDF processing with PyPDF2/pdfminer
-
-**AI Service:**
-Python with OpenAI API / HuggingFace / LangChain
-Scikit-learn for confidence scoring and analytics
-Redis for caching and rate limiting
-
-**Service Ticket Response:**
-FastAPI for backend API
-PostgreSQL for data persistence
-Node.js and React for dashboard UI
-Socket.IO for real-time updates
-
-
+- 🔹 Frontend: React 
+- 🔹 Backend: FastAPI
+- 🔹 Database: 
+- 🔹 Other: Google gemini
 
 ## 👥 Team
+## 👥 Team
+
 Our diverse team brings together expertise in AI, software engineering, and financial services:
 
 K V Subramanyeswar Sarma (Lead Software Engineer): A seasoned leader with deep technical expertise in software development, driving the architectural and strategic direction of our project.
@@ -141,3 +200,4 @@ Santosh Kumar Potnuru (Lead Software Engineer): An experienced engineer providin
 Sri Durga Sravanthi Bikkina (Senior Software Engineer):A mainframe modernization expert now exploring the AI/ML space, bringing a unique blend of legacy transformation knowledge and innovative AI-driven solutions.
 
 Dharanidhar L Lokanandi (Senior Software Engineer):  A skilled Scrum Master facilitating agile execution while leading documentation efforts to ensure clear and structured project artifacts.
+

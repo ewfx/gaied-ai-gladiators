@@ -1,0 +1,17 @@
+# List your dependencies here
+numpy
+pandas
+scikit-learn
+matplotlib
+seaborn
+keras
+jupyter
+notebook
+requests
+beautifulsoup4
+nltk
+spacy
+extract-msg
+python-docx
+pdfplumber
+# Add any other dependencies as needed
