@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 from typing import List, Dict
@@ -8,7 +9,23 @@ from AIService import NLPTicketProcessor
 import json
 import EmailService
 import logging
-app = FastAPI(title="Ticket Response Service")
+import asyncio
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for FastAPI application"""
+    try:
+        # Start email processing in background without awaiting
+        asyncio.create_task(service.process_emails_background())
+        yield
+    finally:
+        if service.is_processing:
+            service.is_processing = False
+
+app = FastAPI(
+    title="Ticket Response Service",
+    lifespan=lifespan
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -25,59 +42,69 @@ class TicketResponseService:
         self.config_path = os.path.join(self.base_dir, "config.json")
         self.prompts_file = os.path.join(self.base_dir, "prompts_keywords.json")
         self.email_folder = os.path.join(self.base_dir, "../../emails")
+        self.is_processing = False
+        self.processed_count = 0
+        self.processed_emails = set()
         
         self.keywords = ["Problem", "Issue", "request", "Amount", "Expiration Date", 
                         "Name", "Deal Name", "Resolution", "Grievance", "Support"]
         
-        # Load configuration
         try:
             with open(self.config_path, 'r') as config_file:
                 config = json.load(config_file)
             
             self.gemini_api_key = config['providers']['google']['api_key']
-            
-            # Initialize AI service
             self.ai_service = NLPTicketProcessor(
                 gemini_api_key=self.gemini_api_key,
                 prompts_keywords_file=self.prompts_file
             )
             
-            # Process emails and generate CSV
-            self.process_emails()
-            
         except FileNotFoundError as e:
-            logging.error(f"Configuration file not found: {e}")
             raise HTTPException(status_code=500, 
                               detail=f"Configuration file not found: {e}")
         except Exception as e:
-            logging.error(f"Error initializing service: {e}")
             raise HTTPException(status_code=500, 
                               detail=f"Error initializing service: {e}")
 
-    def process_emails(self):
-        EmailService.process_email_folder(self.email_folder, self.keywords)
-        email_file = "extracted_data.json"
-        if not email_file or not os.path.exists(email_file):
-            logging.error(f"Email file not found or invalid: {email_file}")
-            raise HTTPException(status_code=500, detail="Email file not found or invalid.")
+    async def process_emails_background(self):
+        """Process emails asynchronously without blocking server startup"""
+        if self.is_processing:
+            return
         
-        with open(email_file, 'r') as f:
-            sample_emails = json.load(f)
-        
-        processed_emails = set()
-        for email in sample_emails:
-            email_data = email.get("email_data", "")
-            email_data_str = json.dumps(email_data, sort_keys=True)  # Convert to a hashable type
-            if email_data_str not in processed_emails:
-                self.ai_service.create_service_ticket(email_data)
-                processed_emails.add(email_data_str)
+        self.is_processing = True
+        try:
+            # Create background task for email processing
+            async def process_emails():
+                EmailService.process_email_folder(self.email_folder, self.keywords)
+                email_file = "extracted_data.json"
+                if not os.path.exists(email_file):
+                    return
+
+                with open(email_file, 'r') as f:
+                    sample_emails = json.load(f)
+
+                for email in sample_emails:
+                    email_data = email.get("email_data", "")
+                    email_data_str = json.dumps(email_data, sort_keys=True)
+                    if email_data_str not in self.processed_emails:
+                        await asyncio.sleep(0.1)
+                        self.ai_service.create_service_ticket(email_data)
+                        self.processed_emails.add(email_data_str)
+                        self.processed_count += 1
+
+            # Start processing without blocking
+            asyncio.create_task(process_emails())
+                    
+        except Exception as e:
+            print(f"Error processing emails: {e}")
+        finally:
+            self.is_processing = False
 
     def load_tickets(self) -> List[Dict]:
         try:
             if not os.path.exists(self.csv_path):
                 return []
             df = pd.read_csv(self.csv_path)
-            # Convert DataFrame to structured dictionaries
             tickets = []
             for _, row in df.iterrows():
                 ticket = {
@@ -96,6 +123,24 @@ class TicketResponseService:
             raise HTTPException(status_code=500, detail=f"Error loading tickets: {str(e)}")
 
 service = TicketResponseService()
+
+@app.get("/process-status")
+async def get_processing_status():
+    """Get the current status of email processing"""
+    return {
+        "is_processing": service.is_processing,
+        "processed_count": service.processed_count
+    }
+
+@app.post("/process-emails")
+async def trigger_email_processing(background_tasks: BackgroundTasks):
+    """Manually trigger email processing"""
+    if service.is_processing:
+        raise HTTPException(status_code=400, detail="Email processing already in progress")
+    # Add and execute background task
+    background_tasks.add_task(service.process_emails_background)
+    await background_tasks()
+    return {"message": "Email processing started"}
 
 @app.get("/tickets/", response_model=List[Dict])
 async def get_all_tickets():
@@ -117,4 +162,17 @@ async def get_ticket_by_id(ticket_id: int):
     return ticket
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    try:
+        # Initialize service before running
+        service = TicketResponseService()
+        
+        # Run the application
+        uvicorn.run(
+            "TicketResponseService:app",
+            host="127.0.0.1",  # Local connections only
+            port=8000,
+            reload=True,     # Enable auto-reload
+            log_level="info"
+        )
+    except Exception as e:
+        print(f"Failed to start server: {e}")
