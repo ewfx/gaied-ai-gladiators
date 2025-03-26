@@ -24,6 +24,7 @@ Welcome to our GenAI-based Email Classification and ticketing for loan servicing
 
 ![Application Demo](./artifacts/demo/1.png)
 ![Application Demo Screen 2](./artifacts/demo/2.png)
+**Design Flow:**
 ![Architecture FLow](./artifacts/demo/DesignFlow.png)
 
 ## 💡 Inspiration
