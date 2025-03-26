@@ -22,7 +22,8 @@ Welcome to our GenAI-based Email Classification and ticketing for loan servicing
 📹 [Video Demo](#) (if applicable)  
 🖼️ Screenshots:
 
-![Screenshot 1](link-to-image)
+![Application Demo](./artifacts/demo/1.png)
+![Architecture Overview](./artifacts/demo/2.png)
 
 ## 💡 Inspiration
 Loan servicing operations are often bogged down by manual email processing, leading to:
