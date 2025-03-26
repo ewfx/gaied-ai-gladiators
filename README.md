@@ -19,7 +19,7 @@ Welcome to our GenAI-based Email Classification and ticketing for loan servicing
 
 ## 🎥 Demo
 🔗 [Live Demo](#) (if applicable)  
-📹 [Video Demo](#) (if applicable)  
+📹 [Video Demo](./artifacts/demo/gaid-gladiators.mp4)
 🖼️ Screenshots:
 
 ![Application Demo](./artifacts/demo/1.png)
