@@ -189,7 +189,6 @@ The frontend will be available at http://localhost:5173
 - 🔹 Other: Google gemini
 
 ## 👥 Team
-## 👥 Team
 
 Our diverse team brings together expertise in AI, software engineering, and financial services:
 
