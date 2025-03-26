@@ -80,7 +80,6 @@ Confidence Calibration - Developing reliable confidence metrics that accurately 
 System Integration - Designing clean interfaces between services while maintaining end-to-end performance.
 Handling Edge Cases - Building resilience for unusual or ambiguous requests that don't clearly fall into predefined categories.
 
-
 ## 🏃 How to Run
 1. Clone the repository:
 ```powershell
@@ -189,6 +188,7 @@ The frontend will be available at http://localhost:5173
 
 ## 👥 Team
 ## 👥 Team
+
 Our diverse team brings together expertise in AI, software engineering, and financial services:
 
 K V Subramanyeswar Sarma (Lead Software Engineer): A seasoned leader with deep technical expertise in software development, driving the architectural and strategic direction of our project.
@@ -200,3 +200,4 @@ Santosh Kumar Potnuru (Lead Software Engineer): An experienced engineer providin
 Sri Durga Sravanthi Bikkina (Senior Software Engineer):A mainframe modernization expert now exploring the AI/ML space, bringing a unique blend of legacy transformation knowledge and innovative AI-driven solutions.
 
 Dharanidhar L Lokanandi (Senior Software Engineer):  A skilled Scrum Master facilitating agile execution while leading documentation efforts to ensure clear and structured project artifacts.
+
