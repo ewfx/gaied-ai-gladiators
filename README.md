@@ -19,7 +19,8 @@ Welcome to our GenAI-based Email Classification and ticketing for loan servicing
 
 ## 🎥 Demo
 🔗 [Live Demo](#) (if applicable)  
-📹 [Video Demo](#) (if applicable)  
+📹 [Video Demo]
+<video controls src="https://github.com/user-attachments/assets/64075730-f847-4f0c-8e72-ed68a4284c31" title="Demo video"></video>
 🖼️ Screenshots:
 
 **UI Screens:**
